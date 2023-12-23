@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@element-plus/icons-vue':
+    specifier: ^2.3.1
+    version: registry.npmmirror.com/@element-plus/icons-vue@2.3.1(vue@3.3.13)
   '@vueuse/core':
     specifier: ^10.7.0
     version: registry.npmmirror.com/@vueuse/core@10.7.0(vue@3.3.13)
@@ -31,6 +34,9 @@ devDependencies:
   '@vitejs/plugin-vue':
     specifier: ^4.5.2
     version: registry.npmmirror.com/@vitejs/plugin-vue@4.5.2(vite@5.0.10)(vue@3.3.13)
+  sass:
+    specifier: ^1.69.5
+    version: registry.npmmirror.com/sass@1.69.5
   unplugin-auto-import:
     specifier: ^0.17.2
     version: registry.npmmirror.com/unplugin-auto-import@0.17.2(@vueuse/core@10.7.0)
@@ -39,7 +45,7 @@ devDependencies:
     version: registry.npmmirror.com/unplugin-vue-components@0.26.0(vue@3.3.13)
   vite:
     specifier: ^5.0.10
-    version: registry.npmmirror.com/vite@5.0.10
+    version: registry.npmmirror.com/vite@5.0.10(sass@1.69.5)
 
 packages:
 
@@ -604,7 +610,7 @@ packages:
       vite: ^4.0.0 || ^5.0.0
       vue: ^3.2.25
     dependencies:
-      vite: registry.npmmirror.com/vite@5.0.10
+      vite: registry.npmmirror.com/vite@5.0.10(sass@1.69.5)
       vue: registry.npmmirror.com/vue@3.3.13
     dev: true
 
@@ -1067,6 +1073,12 @@ packages:
       function-bind: registry.npmmirror.com/function-bind@1.1.2
     dev: true
 
+  registry.npmmirror.com/immutable@4.3.4:
+    resolution: {integrity: sha512-fsXeu4J4i6WNWSikpI88v/PcVflZz+6kMhUfIwc5SY+poQRPnaf5V7qds6SUyUN3cVxEzuCab7QIoLOQ+DQ1wA==, tarball: https://registry.npmmirror.com/immutable/-/immutable-4.3.4.tgz}
+    name: immutable
+    version: 4.3.4
+    dev: true
+
   registry.npmmirror.com/is-binary-path@2.1.0:
     resolution: {integrity: sha512-ZMERYes6pDydyuGidse7OsHxtbI7WVeUEozgR/g7rd0xUimYNlvZRE/K2MgZTjWy725IfelLeVcEM97mmtRGXw==, tarball: https://registry.npmmirror.com/is-binary-path/-/is-binary-path-2.1.0.tgz}
     name: is-binary-path
@@ -1391,6 +1403,18 @@ packages:
       queue-microtask: registry.npmmirror.com/queue-microtask@1.2.3
     dev: true
 
+  registry.npmmirror.com/sass@1.69.5:
+    resolution: {integrity: sha512-qg2+UCJibLr2LCVOt3OlPhr/dqVHWOa9XtZf2OjbLs/T4VPSJ00udtgJxH3neXZm+QqX8B+3cU7RaLqp1iVfcQ==, tarball: https://registry.npmmirror.com/sass/-/sass-1.69.5.tgz}
+    name: sass
+    version: 1.69.5
+    engines: {node: '>=14.0.0'}
+    hasBin: true
+    dependencies:
+      chokidar: registry.npmmirror.com/chokidar@3.5.3
+      immutable: registry.npmmirror.com/immutable@4.3.4
+      source-map-js: registry.npmmirror.com/source-map-js@1.0.2
+    dev: true
+
   registry.npmmirror.com/scss@0.2.4:
     resolution: {integrity: sha512-4u8V87F+Q/upVhUmhPnB4C1R11xojkRkWjExL2v0CX2EXTg18VrKd+9JWoeyCp2VEMdSpJsyAvVU+rVjogh51A==, tarball: https://registry.npmmirror.com/scss/-/scss-0.2.4.tgz}
     name: scss
@@ -1539,8 +1563,9 @@ packages:
       webpack-virtual-modules: registry.npmmirror.com/webpack-virtual-modules@0.6.1
     dev: true
 
-  registry.npmmirror.com/vite@5.0.10:
+  registry.npmmirror.com/vite@5.0.10(sass@1.69.5):
     resolution: {integrity: sha512-2P8J7WWgmc355HUMlFrwofacvr98DAjoE52BfdbwQtyLH06XKwaL/FMnmKM2crF0iX4MpmMKoDlNCB1ok7zHCw==, tarball: https://registry.npmmirror.com/vite/-/vite-5.0.10.tgz}
+    id: registry.npmmirror.com/vite/5.0.10
     name: vite
     version: 5.0.10
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -1572,6 +1597,7 @@ packages:
       esbuild: registry.npmmirror.com/esbuild@0.19.10
       postcss: registry.npmmirror.com/postcss@8.4.32
       rollup: registry.npmmirror.com/rollup@4.9.1
+      sass: registry.npmmirror.com/sass@1.69.5
     optionalDependencies:
       fsevents: registry.npmmirror.com/fsevents@2.3.3
     dev: true
