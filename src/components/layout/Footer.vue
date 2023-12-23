@@ -1,6 +1,6 @@
 <template>
     <div class="footer">
-        Footer
+        ©2023 All Rights Reserved
     </div>
 </template>
 
@@ -10,6 +10,12 @@
 
 <style lang="scss" scoped>
 .footer{
-    height:16px;
+    height: 10%;
+    display: flex;
+    font-size: 1rem;
+    color: #a7a7a7;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 </style>

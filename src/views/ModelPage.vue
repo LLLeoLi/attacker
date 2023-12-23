@@ -10,7 +10,7 @@
                     <div class="model-name">
                         {{ model.name }}
                         <template v-if="!model.selected">
-                            <el-button type="success" :icon="Plus" @click="selectModel(model,index)" circle></el-button>
+                            <el-button color="#626aef" :icon="Plus" @click="selectModel(model,index)" circle></el-button>
                         </template>
                         <template v-else>
                             <el-button type="danger" :icon="Minus" @click="selectModel(model,index)" circle></el-button>
@@ -30,11 +30,12 @@
             </div>
             <div class="content">
                 <template v-if="output.length">
-                <div v-for="out in output" :key="out.name">
-                    <div>
-                        {{ out.name }}
+                <div class="output" v-for="out in output" :key="out.name">
+                    <div class="output-model">
+                        <div class="output-name">{{ out.name }}</div>
+                        <!-- <el-button class="output-copy" circle plain :icon="DocumentCopy" @click="toCopy(out.value)"></el-button> -->
                     </div>
-                    <div>
+                    <div class="output-text">
                         {{ out.value }}
                     </div>
                 </div>
@@ -42,7 +43,7 @@
                 <el-empty v-else description="暂无内容" />
             </div>
             <div class="next">
-                <el-button type="primary" :icon="CaretRight" >结果分析</el-button>
+                <el-button type="primary" :icon="CaretRight" >数据分析</el-button>
             </div>
         </div>
         <div class="model-analyse">
@@ -50,18 +51,21 @@
                 <Analyse class="icon"></Analyse>
                 <span>数据分析</span>
             </div>
+            <div class="content">
+
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { CaretRight, Plus, Minus, Delete } from '@element-plus/icons-vue';
+import { CaretRight, Plus, Minus, Delete, DocumentCopy } from '@element-plus/icons-vue';
 import Model from "../components/icons/Model";
 import Result from "../components/icons/Result";
 import Attack from "../components/icons/Attack";
 import Analyse from '../components/icons/Analyse';
-import { onMounted } from 'vue';
-import axios from 'axios';
+import { ElLoading, ElMessage } from 'element-plus';
+import { TransitionPresets, useTransition, useClipboard } from '@vueuse/core';
 const models = [
     {
         name:"Qwen-14B-Chat",
@@ -244,6 +248,8 @@ const deleteAll = ()=>{
     })
     selectedModelList.value.length = 0;
 }
+
+// 获取内容
 const getToken = ()=>{
     return "24.d67162c0bee374c3575f6cf1b1049653.2592000.1705859414.282335-45184890";
 }
@@ -294,6 +300,16 @@ const attackApi = async (model)=>{
     output.value.push(obj);
     output.value.sort((a,b)=>a.index<b.index);
 }
+
+const { text, isSupported, copy } = useClipboard();
+const toCopy = (str)=>{
+    copy(str);
+    ElMessage({
+        message: '成功复制',
+        type: 'success',
+    })
+}
+// 得到比率
 </script>
 
 <style lang="scss" scoped>
@@ -362,6 +378,31 @@ const attackApi = async (model)=>{
             align-items: center;
             height: 80%;
             overflow-y: auto;
+            .output{
+                margin: 1rem .3rem;
+                padding: .3rem;
+                border: solid 1px #8b8b8b;
+                border-radius: .3rem;
+                &-model{
+                    border-bottom: 1px solid #dcdfe6;
+                    // font-size: 32px;
+                    font-weight: bold;
+                    display: flex;
+                    justify-content: space-between;
+                }
+                &-text{
+                    color: #a8a8a8;
+                    padding: .3rem;
+                }
+                &-copy{
+                    // display: flex;
+                    // justify-content: center;
+                    // flex-direction: column;
+                }
+                &-name{
+                    
+                }
+            }
         }
         .next{
             height: 10%;
@@ -371,6 +412,19 @@ const attackApi = async (model)=>{
         }
     }
     &-res:hover{
+        border: 1px solid #dcdfe6;
+    }
+    &-analyse{
+        width:20%;
+        border-radius: .3rem;
+        background-color: #f3f5fb;
+        .content{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    }
+    &-analyse:hover{
         border: 1px solid #dcdfe6;
     }
 }
