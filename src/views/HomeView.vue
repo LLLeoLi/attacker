@@ -1,5 +1,5 @@
 <template>
-  <div class="clear">
+  <div>
     <Header></Header>
     <div class="main">
       <RouterView></RouterView>
@@ -12,9 +12,6 @@ import Header from "../components/layout/Header"
 import Footer from "../components/layout/Footer"
 </script>
 <style lang="scss" scoped>
-.clear{
-  height: 100%;
-}
 .main{
   overflow: hidden;
   background-color: #eff7f8;

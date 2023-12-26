@@ -1,26 +1,36 @@
 <template>
     <div class="model">
         <div class="model-list">
+
             <div class="title">
                 <Model class="icon"></Model>
                 <span>模型列表</span>
+            </div>
+            <div class="search">
+                <el-input v-model="searchInput" placeholder="请输入prompt">
+                    <template #prepend>
+                        <el-button :icon="Attack" />
+                    </template>
+                </el-input>
             </div>
             <div class="content">
                 <div class="row" v-for="(model, index) in modelList" :key="model.name">
                     <div class="model-name">
                         {{ model.name }}
                         <template v-if="!model.selected">
-                            <el-button color="#626aef" :icon="Plus" @click="selectModel(model,index)" circle></el-button>
+                            <el-button color="#626aef" :icon="Plus" @click="selectModel(model, index)" circle></el-button>
                         </template>
                         <template v-else>
-                            <el-button type="danger" :icon="Minus" @click="selectModel(model,index)" circle></el-button>
+                            <el-button type="danger" :icon="Minus" @click="selectModel(model, index)" circle></el-button>
                         </template>
                     </div>
                 </div>
             </div>
             <div class="run">
-                <el-button type="warning" :icon="Delete" :disabled="selectedModelList.length==0" @click="deleteAll">全部清除</el-button>
-                <el-button color="#626aef" :icon="Attack" :disabled="selectedModelList.length==0" @click="attack">攻击模型 ({{ selectedModelList.length }}/20)</el-button>
+                <el-button type="warning" :icon="Delete" :disabled="selectedModelList.length == 0"
+                    @click="deleteAll">清除模型</el-button>
+                <el-button color="#626aef" :icon="Attack" :disabled="selectedModelList.length == 0 || searchInput.length == 0"
+                    @click="attack">攻击模型 ({{ selectedModelList.length }}/20)</el-button>
             </div>
         </div>
         <div class="model-res">
@@ -30,304 +40,400 @@
             </div>
             <div class="content">
                 <template v-if="output.length">
-                <div class="output" v-for="out in output" :key="out.name">
-                    <div class="output-model">
-                        <div class="output-name">{{ out.name }}</div>
-                        <!-- <el-button class="output-copy" circle plain :icon="DocumentCopy" @click="toCopy(out.value)"></el-button> -->
+                    <div class="output" v-for="out in output" :key="out.name">
+                        <div class="output-model">
+                            <div class="output-name">{{ out.name }}
+                                <!-- <el-button class="output-copy" type="text" plain :icon="DocumentCopy" @click="toCopy(out.value)"></el-button> -->
+                            </div>
+                        </div>
+                        <div class="output-text">
+                            {{ out.value }}
+                        </div>
                     </div>
-                    <div class="output-text">
-                        {{ out.value }}
-                    </div>
-                </div>
                 </template>
                 <el-empty v-else description="暂无内容" />
             </div>
             <div class="next">
-                <el-button type="primary" :icon="CaretRight" >数据分析</el-button>
+                <el-button type="primary" :icon="Analyse">安全性检测</el-button>
             </div>
         </div>
         <div class="model-analyse">
             <div class="title">
                 <Analyse class="icon"></Analyse>
-                <span>数据分析</span>
+                <span>安全性检测</span>
             </div>
+            <div class="rate" id="rate"></div>
             <div class="content">
-
+                <div class="analysis" v-for="out in output" :key="out.name">
+                    <div class="analysis-model">
+                        <div class="output-name">{{ out.name }}</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { CaretRight, Plus, Minus, Delete, DocumentCopy } from '@element-plus/icons-vue';
+import { Plus, Minus, Delete, DocumentCopy, Search } from '@element-plus/icons-vue';
 import Model from "../components/icons/Model";
 import Result from "../components/icons/Result";
 import Attack from "../components/icons/Attack";
 import Analyse from '../components/icons/Analyse';
 import { ElLoading, ElMessage } from 'element-plus';
 import { TransitionPresets, useTransition, useClipboard } from '@vueuse/core';
+import * as echarts from 'echarts';
+import { onMounted } from 'vue';
 const models = [
     {
-        name:"Qwen-14B-Chat",
-        description:"Qwen-14B-Chat"
+        name: "Qwen-14B-Chat",
+        description: "Qwen-14B-Chat"
     },
     {
-        name:"Qwen-14B-Base",
-        description:"Qwen-14B-Base"
+        name: "Qwen-14B-Base",
+        description: "Qwen-14B-Base"
     },
     {
-        name:"InternLM-20B",
-        description:"InternLM-20B"
+        name: "InternLM-20B",
+        description: "InternLM-20B"
     },
     {
-        name:"InternLM-Chat-7B",
-        description:"InternLM-Chat-7B"
+        name: "InternLM-Chat-7B",
+        description: "InternLM-Chat-7B"
     },
     {
-        name:"Baichuan2-13B-Chat",
-        description:"Baichuan2-13B-Chat"
+        name: "Baichuan2-13B-Chat",
+        description: "Baichuan2-13B-Chat"
     },
     {
-        name:"Yulan-Chat-2-13B",
-        description:"Yulan-Chat-2-13B"
+        name: "Yulan-Chat-2-13B",
+        description: "Yulan-Chat-2-13B"
     },
     {
-        name:"Baichuan-13B-Chat",
-        description:"Baichuan-13B-Chat"
+        name: "Baichuan-13B-Chat",
+        description: "Baichuan-13B-Chat"
     },
     {
-        name:"ChatGLM3-6B",
-        description:"ChatGLM3-6B"
+        name: "ChatGLM3-6B",
+        description: "ChatGLM3-6B"
     },
     {
-        name:"Qwen-7B-Base",
-        description:"Qwen-7B-Base"
+        name: "Qwen-7B-Base",
+        description: "Qwen-7B-Base"
     },
     {
-        name:"BELLE-LLaMA-2-Chat",
-        description:"BELLE-LLaMA-2-Chat"
+        name: "BELLE-LLaMA-2-Chat",
+        description: "BELLE-LLaMA-2-Chat"
     },
     {
-        name:"Baichuan2-7B-Chat",
-        description:"Baichuan2-7B-Chat"
+        name: "Baichuan2-7B-Chat",
+        description: "Baichuan2-7B-Chat"
     },
     {
-        name:"ChatGLM2-6B",
-        description:"ChatGLM2-6B"
+        name: "ChatGLM2-6B",
+        description: "ChatGLM2-6B"
     },
     {
-        name:"Qwen-14B-Chat",
-        description:"Qwen-14B-Chat"
+        name: "Qwen-14B-Chat",
+        description: "Qwen-14B-Chat"
     },
     {
-        name:"LLaMa-2-13B-Chinese-Chat",
-        description:"LLaMa-2-13B-Chinese-Chat"
+        name: "LLaMa-2-13B-Chinese-Chat",
+        description: "LLaMa-2-13B-Chinese-Chat"
     },
     {
-        name:"Chinese-Alpaca-2-7B-Chat",
-        description:"Chinese-Alpaca-2-7B-Chat"
+        name: "Chinese-Alpaca-2-7B-Chat",
+        description: "Chinese-Alpaca-2-7B-Chat"
     },
     {
-        name:"Chinese-LLaMA-2-7B-Chat",
-        description:"Chinese-LLaMA-2-7B-Chat"
+        name: "Chinese-LLaMA-2-7B-Chat",
+        description: "Chinese-LLaMA-2-7B-Chat"
     },
     {
-        name:"Baichuan-13B-Base",
-        description:"Baichuan-13B-Base"
+        name: "Baichuan-13B-Base",
+        description: "Baichuan-13B-Base"
     },
     {
-        name:"Baichuan2-13B-Base",
-        description:"Baichuan2-13B-Base"
+        name: "Baichuan2-13B-Base",
+        description: "Baichuan2-13B-Base"
     },
     {
-        name:"XVERSE-13B",
-        description:"XVERSE-13B"
+        name: "XVERSE-13B",
+        description: "XVERSE-13B"
     },
     {
-        name:"InternLM-7B",
-        description:"InternLM-7B"
+        name: "InternLM-7B",
+        description: "InternLM-7B"
     }
 ];
 const modelList = ref([
     {
-        name:"Qwen-14B-Chat",
-        description:"Qwen-14B-Chat"
+        name: "Qwen-14B-Chat",
+        description: "Qwen-14B-Chat"
     },
     {
-        name:"Qwen-14B-Base",
-        description:"Qwen-14B-Base"
+        name: "Qwen-14B-Base",
+        description: "Qwen-14B-Base"
     },
     {
-        name:"InternLM-20B",
-        description:"InternLM-20B"
+        name: "InternLM-20B",
+        description: "InternLM-20B"
     },
     {
-        name:"InternLM-Chat-7B",
-        description:"InternLM-Chat-7B"
+        name: "InternLM-Chat-7B",
+        description: "InternLM-Chat-7B"
     },
     {
-        name:"Baichuan2-13B-Chat",
-        description:"Baichuan2-13B-Chat"
+        name: "Baichuan2-13B-Chat",
+        description: "Baichuan2-13B-Chat"
     },
     {
-        name:"Yulan-Chat-2-13B",
-        description:"Yulan-Chat-2-13B"
+        name: "Yulan-Chat-2-13B",
+        description: "Yulan-Chat-2-13B"
     },
     {
-        name:"Baichuan-13B-Chat",
-        description:"Baichuan-13B-Chat"
+        name: "Baichuan-13B-Chat",
+        description: "Baichuan-13B-Chat"
     },
     {
-        name:"ChatGLM3-6B",
-        description:"ChatGLM3-6B"
+        name: "ChatGLM3-6B",
+        description: "ChatGLM3-6B"
     },
     {
-        name:"Qwen-7B-Base",
-        description:"Qwen-7B-Base"
+        name: "Qwen-7B-Base",
+        description: "Qwen-7B-Base"
     },
     {
-        name:"BELLE-LLaMA-2-Chat",
-        description:"BELLE-LLaMA-2-Chat"
+        name: "BELLE-LLaMA-2-Chat",
+        description: "BELLE-LLaMA-2-Chat"
     },
     {
-        name:"Baichuan2-7B-Chat",
-        description:"Baichuan2-7B-Chat"
+        name: "Baichuan2-7B-Chat",
+        description: "Baichuan2-7B-Chat"
     },
     {
-        name:"ChatGLM2-6B",
-        description:"ChatGLM2-6B"
+        name: "ChatGLM2-6B",
+        description: "ChatGLM2-6B"
     },
     {
-        name:"Qwen-14B-Chat",
-        description:"Qwen-14B-Chat"
+        name: "Qwen-14B-Chat",
+        description: "Qwen-14B-Chat"
     },
     {
-        name:"LLaMa-2-13B-Chinese-Chat",
-        description:"LLaMa-2-13B-Chinese-Chat"
+        name: "LLaMa-2-13B-Chinese-Chat",
+        description: "LLaMa-2-13B-Chinese-Chat"
     },
     {
-        name:"Chinese-Alpaca-2-7B-Chat",
-        description:"Chinese-Alpaca-2-7B-Chat"
+        name: "Chinese-Alpaca-2-7B-Chat",
+        description: "Chinese-Alpaca-2-7B-Chat"
     },
     {
-        name:"Chinese-LLaMA-2-7B-Chat",
-        description:"Chinese-LLaMA-2-7B-Chat"
+        name: "Chinese-LLaMA-2-7B-Chat",
+        description: "Chinese-LLaMA-2-7B-Chat"
     },
     {
-        name:"Baichuan-13B-Base",
-        description:"Baichuan-13B-Base"
+        name: "Baichuan-13B-Base",
+        description: "Baichuan-13B-Base"
     },
     {
-        name:"Baichuan2-13B-Base",
-        description:"Baichuan2-13B-Base"
+        name: "Baichuan2-13B-Base",
+        description: "Baichuan2-13B-Base"
     },
     {
-        name:"XVERSE-13B",
-        description:"XVERSE-13B"
+        name: "XVERSE-13B",
+        description: "XVERSE-13B"
     },
     {
-        name:"InternLM-7B",
-        description:"InternLM-7B"
+        name: "InternLM-7B",
+        description: "InternLM-7B"
     }
 ]);
+const searchInput = ref("");
 const selectedModelList = ref([]);
 // 选择攻击模型
-const selectModel = (model,index) => {
+const selectModel = (model, index) => {
     model.selected = !model.selected;
-    if(model.selected){
+    if (model.selected) {
         model.index = index;
         selectedModelList.value.push(model);
-    }else{
-        selectedModelList.value.splice(selectedModelList.value.indexOf(model),1);
+    } else {
+        selectedModelList.value.splice(selectedModelList.value.indexOf(model), 1);
     }
 }
 // 全部清除
-const deleteAll = ()=>{
-    modelList.value.forEach(model=>{
+const deleteAll = () => {
+    modelList.value.forEach(model => {
         model.selected = false;
     })
     selectedModelList.value.length = 0;
 }
 
 // 获取内容
-const getToken = ()=>{
+const getToken = () => {
     return "24.d67162c0bee374c3575f6cf1b1049653.2592000.1705859414.282335-45184890";
 }
 const output = ref([]);
-const attack = ()=>{
+const attack = () => {
+    if (!searchInput.value) {
+        ElMessage({
+            message: '请输入prompt',
+            type: 'warning',
+        });
+        return;
+    }
+    if (selectedModelList.value.length == 0) {
+        ElMessage({
+            message: '请选择模型',
+            type: 'warning',
+        });
+        return;
+    }
     output.value.length = 0;
-    selectedModelList.value.forEach(model=>{
+    selectedModelList.value.forEach(model => {
         attackApi(model);
     })
     console.log(output.value);
 }
-const attackApi = async (model)=>{
+const attackApi = async (model) => {
     const url = `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatglm2_6b_32k?access_token=${getToken()}`;
     const data = {
         "top_p": 0.5,
         "temperature": 0.9,
         "messages": [
-            {"role": "user", "content": "你好，我想问一下，我想买一件衣服，但是我不知道怎么买，你能帮我吗？"},
+            { "role": "user", "content": searchInput.value },
         ],
-        "stream":true,
+        "stream": true,
     };
-    const res = await fetch(url,{
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json",
-        },
-        body: JSON.stringify(data)
-    });
-    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
     let obj = {};
     obj.name = model.name;
     obj.index = model.index;
     obj.value = "";
-    while(true){
-        let res = await reader.read();
-        if(res.done) break;
-        console.log(obj.name,res.value.replace("data: ",""));
+    let res = {};
+    try {
+        res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data)
+        });
+    } catch {
+        output.value.push(obj);
+        output.value.sort((a, b) => a.index < b.index);
+        return;
+    }
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    while (true) {
+        res = await reader.read();
+        console.log("res", res);
+        if (res.done) break;
+        // console.log(obj.name,res.value.replace("data: ",""));
         let value = {
-            result:""
+            result: ""
         }
-        try{
-            value = JSON.parse(res.value.replace("data: ",""));
-        }catch{
+        try {
+            value = JSON.parse(res.value.replace("data: ", ""));
+        } catch {
             value.result = "";
         }
-        obj.value +=value.result;
+        obj.value += value.result;
     }
     output.value.push(obj);
-    output.value.sort((a,b)=>a.index<b.index);
+    console.log(output.value);
+    output.value.sort((a, b) => a.index - b.index);
 }
-
+// TODO: 之后决定是否添加复制功能
 const { text, isSupported, copy } = useClipboard();
-const toCopy = (str)=>{
+const toCopy = (str) => {
     copy(str);
     ElMessage({
         message: '成功复制',
         type: 'success',
     })
 }
-// 得到比率
+
+// 可视化展示rate
+const initRate = () => {
+    let rateChart = echarts.init(document.getElementById('rate'));
+    let option = {
+        title: {
+            text: '前后prompt对比',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'item'
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left'
+        },
+        series: [
+            {
+                name: '原始prompt',
+                type: 'pie',
+                radius: '50%',
+                center: ['25%', '50%'],
+                label: {
+                    formatter: '{c}',
+                    position: 'inside',
+                },
+                itemStyle: {
+                    borderRadius: 5
+                },
+                data: [
+                    { value: 14, name: '安全' },
+                    { value: 5, name: '不安全' },
+                    { value: 1, name: '有争议' },
+                ]
+            },
+            {
+                name: '攻击prompt',
+                type: 'pie',
+                radius: '50%',
+                center: ['75%', '50%'],
+                itemStyle: {
+                    borderRadius: 5
+                },
+                label: {
+                    formatter: '{c}',
+                    position: 'inside',
+                },
+                data: [
+                    { value: 4, name: '安全' },
+                    { value: 13, name: '不安全' },
+                    { value: 3, name: '有争议' },
+                ]
+            }
+        ]
+    };
+    rateChart.setOption(option);
+}
+onMounted(() => {
+    initRate();
+})
 </script>
 
 <style lang="scss" scoped>
-.model{
+.model {
     display: flex;
     justify-content: space-around;
-    height: calc(90vh - 64px);
-    &-list{
-        width: 35%;
+    height: calc(100vh - 64px);
+
+    &-list {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        width: 30%;
         border-radius: .3rem;
         background-color: #f3f5fb;
-        .content{
+
+        .content {
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 80%;
+            height: 75%;
             overflow-y: auto;
-            .model-name{
+
+            .model-name {
                 font-family: Inter, "Helvetica Neue", Helvetica, "PingFang SC";
                 font-size: 20px;
                 font-weight: 400;
@@ -338,19 +444,26 @@ const toCopy = (str)=>{
                 display: flex;
                 justify-content: space-between;
             }
+
             .row {
                 width: 100%;
                 margin-bottom: 10px;
             }
         }
-        .run{
+
+        .run {
             height: 10%;
             display: flex;
             justify-content: center;
             align-items: center;
         }
     }
-    .title{
+
+    .search {
+        height: 5%;
+    }
+
+    .title {
         height: 10%;
         margin: 0 auto;
         align-items: center;
@@ -361,71 +474,97 @@ const toCopy = (str)=>{
         display: flex;
         justify-content: center;
         border-bottom: 1px solid #dcdfe6;
-        .icon{
+
+        .icon {
             height: 185px;
         }
     }
-    &-list:hover{
+
+    &-list:hover {
         border: 1px solid #dcdfe6;
     }
-    &-res{
-        width:35%;
+
+    &-res {
+        width: 30%;
         border-radius: .3rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
         background-color: #f3f5fb;
-        .content{
+
+        .content {
             display: flex;
             flex-direction: column;
             align-items: center;
             height: 80%;
             overflow-y: auto;
-            .output{
+
+            .output {
                 margin: 1rem .3rem;
                 padding: .3rem;
-                border: solid 1px #8b8b8b;
-                border-radius: .3rem;
-                &-model{
+
+                &-model {
                     border-bottom: 1px solid #dcdfe6;
-                    // font-size: 32px;
                     font-weight: bold;
                     display: flex;
-                    justify-content: space-between;
+                    font-size: 1.3rem;
+                    justify-content: center;
                 }
-                &-text{
+
+                &-text {
                     color: #a8a8a8;
                     padding: .3rem;
                 }
-                &-copy{
-                    // display: flex;
-                    // justify-content: center;
-                    // flex-direction: column;
-                }
-                &-name{
-                    
-                }
             }
         }
-        .next{
+
+        .next {
             height: 10%;
             display: flex;
             justify-content: center;
             align-items: center;
         }
     }
-    &-res:hover{
+
+    &-res:hover {
         border: 1px solid #dcdfe6;
     }
-    &-analyse{
-        width:20%;
+
+    &-analyse {
+        width: 30%;
         border-radius: .3rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
         background-color: #f3f5fb;
-        .content{
+        overflow-y: auto;
+
+        .rate {
+            margin-top: 1rem;
+            width: 100%;
+            height: 250px;
+            border-bottom: 1px solid #dcdfe6;
+        }
+
+        .content {
             display: flex;
             flex-direction: column;
             align-items: center;
+
+            .analysis {
+                margin: 1rem .3rem;
+                padding: .3rem;
+
+                &-model {
+                    border-bottom: 1px solid #dcdfe6;
+                    font-weight: bold;
+                    display: flex;
+                    font-size: 1.3rem;
+                    justify-content: center;
+                }
+            }
         }
     }
-    &-analyse:hover{
+
+    &-analyse:hover {
         border: 1px solid #dcdfe6;
     }
-}
-</style>
+}</style>

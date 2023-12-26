@@ -10,7 +10,7 @@
 
 <style lang="scss" scoped>
 .footer{
-    height: 10%;
+    height: 10vh;
     display: flex;
     font-size: 1rem;
     color: #a7a7a7;
