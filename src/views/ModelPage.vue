@@ -1,7 +1,6 @@
 <template>
     <div class="model">
         <div class="model-list">
-
             <div class="title">
                 <Model class="icon"></Model>
                 <span>模型列表</span>
@@ -54,7 +53,7 @@
                 <el-empty v-else description="暂无内容" />
             </div>
             <div class="next">
-                <el-button type="primary" :icon="Analyse">安全性检测</el-button>
+                <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="output.length==0">安全性检测</el-button>
             </div>
         </div>
         <div class="model-analyse">
@@ -62,14 +61,20 @@
                 <Analyse class="icon"></Analyse>
                 <span>安全性检测</span>
             </div>
-            <div class="rate" id="rate"></div>
-            <div class="content">
-                <div class="analysis" v-for="out in output" :key="out.name">
-                    <div class="analysis-model">
-                        <div class="output-name">{{ out.name }}</div>
+            <template v-if="showCritic">
+                <div class="rate" id="rate" ref="rate"></div>
+                <div class="content">
+                    <div class="analysis" v-for="out in criticOutput" :key="out.name">
+                        <div class="analysis-model">
+                            <div class="output-name">{{ out.name }}</div>
+                        </div>
+                        <div class="analysis-text">
+                            {{ out.analysis }}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </template>
+            <el-empty v-else description="暂无内容" />
         </div>
     </div>
 </template>
@@ -82,6 +87,7 @@ import Attack from "../components/icons/Attack";
 import Analyse from '../components/icons/Analyse';
 import { ElLoading, ElMessage } from 'element-plus';
 import { TransitionPresets, useTransition, useClipboard } from '@vueuse/core';
+import { getEva } from "../api/models"
 import * as echarts from 'echarts';
 import { onMounted } from 'vue';
 const models = [
@@ -292,7 +298,7 @@ const attack = () => {
     selectedModelList.value.forEach(model => {
         attackApi(model);
     })
-    console.log(output.value);
+    console.log("output",output.value);
 }
 const attackApi = async (model) => {
     const url = `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatglm2_6b_32k?access_token=${getToken()}`;
@@ -325,7 +331,7 @@ const attackApi = async (model) => {
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
     while (true) {
         res = await reader.read();
-        console.log("res", res);
+        // console.log("res", res);
         if (res.done) break;
         // console.log(obj.name,res.value.replace("data: ",""));
         let value = {
@@ -353,11 +359,13 @@ const toCopy = (str) => {
 }
 
 // 可视化展示rate
-const initRate = () => {
-    let rateChart = echarts.init(document.getElementById('rate'));
+const showCritic = ref(false);
+const rate = ref();
+const initRate = (safe,unsafe,contro) => {
+    let rateChart = echarts.init(rate.value);
     let option = {
         title: {
-            text: '前后prompt对比',
+            text: '前后结果对比',
             left: 'center'
         },
         tooltip: {
@@ -381,9 +389,9 @@ const initRate = () => {
                     borderRadius: 5
                 },
                 data: [
-                    { value: 14, name: '安全' },
-                    { value: 5, name: '不安全' },
-                    { value: 1, name: '有争议' },
+                    { value: safe+unsafe+contro, name: '安全' },
+                    { value: 0, name: '不安全' },
+                    { value: 0, name: '有争议' },
                 ]
             },
             {
@@ -399,18 +407,56 @@ const initRate = () => {
                     position: 'inside',
                 },
                 data: [
-                    { value: 4, name: '安全' },
-                    { value: 13, name: '不安全' },
-                    { value: 3, name: '有争议' },
+                    { value: safe, name: '安全' },
+                    { value: unsafe, name: '不安全' },
+                    { value: contro, name: '有争议' },
                 ]
             }
         ]
     };
     rateChart.setOption(option);
 }
-onMounted(() => {
-    initRate();
-})
+const criticOutput = ref([]);
+const cirticAnalyze = ()=>{
+    showCritic.value = true;
+    const crList = [];
+    output.value.forEach((item)=>{
+        let temp = {
+            // TODO: 替换prompt
+            context:searchInput.value||"你好",
+            response:item.value,
+            lang:"zh"
+        }
+        console.log("TEMP",temp);
+        crList.push(temp);
+    })
+    ElMessage({
+        message: '正在分析,请耐心等待…',
+        type: 'success',
+    })
+    getEva(crList).then((res)=>{
+        console.log("getEva",res);
+        let safe = 0, unsafe = 0, contro = 0;
+        res.data.forEach((item,index)=>{
+            criticOutput.value.push({
+                analysis:item.analysis,
+                name:output.value[index].name,
+                label:item.label
+            })
+            if(item.label==0){
+                safe++;
+            }else if(item.label==1){
+                unsafe++;
+            }else{
+                contro++;
+            }
+        })
+        initRate(safe, unsafe,contro);
+    }).catch((err)=>{
+        console.log(err);
+    })
+}
+
 </script>
 
 <style lang="scss" scoped>
@@ -536,7 +582,7 @@ onMounted(() => {
         margin-bottom: 1rem;
         background-color: #f3f5fb;
         overflow-y: auto;
-
+        overflow-x: hidden;
         .rate {
             margin-top: 1rem;
             width: 100%;
@@ -559,6 +605,10 @@ onMounted(() => {
                     display: flex;
                     font-size: 1.3rem;
                     justify-content: center;
+                }
+                &-text {
+                    color: #a8a8a8;
+                    padding: .3rem;
                 }
             }
         }
