@@ -5,12 +5,34 @@
                 <Model class="icon"></Model>
                 <span>模型列表</span>
             </div>
+            <div class="switch">
+                <el-radio-group v-model="attackType" size="large" fill="#626aef" @change="clearSearchInput">
+                    <el-radio-button color="#626aef" label="类型攻击" />
+                    <el-radio-button color="#626aef" label="自由攻击" />
+                </el-radio-group>
+            </div>
             <div class="search">
-                <el-input v-model="searchInput" placeholder="请输入prompt">
-                    <template #prepend>
-                        <el-button :icon="Attack" />
-                    </template>
-                </el-input>
+                <template v-if="attackType=='自由攻击'">
+                    <el-input v-model="searchInput" :prefix-icon="Attack"  placeholder="请输入prompt"/>
+                </template>
+                <template v-else>
+                    <el-select v-model="attackScenario" placeholder="Select" @change="changeSearchInput">
+                        <el-option
+                        v-for="item in scenarioList"
+                        :key="item"
+                        :label="item"
+                        :value="item"
+                        >
+                            <span style = "
+                            color: var(--el-text-color-secondary);
+                            ">
+                                {{ item }}
+                            </span>
+                        </el-option>
+                    </el-select>
+                    <el-input v-model="searchInput" placeholder="请输入prompt" disabled>
+                    </el-input>
+                </template>
             </div>
             <div class="content">
                 <div class="row" v-for="(model, index) in modelList" :key="model.name">
@@ -80,7 +102,7 @@
 </template>
 
 <script setup>
-import { Plus, Minus, Delete, DocumentCopy, Search } from '@element-plus/icons-vue';
+import { Plus, Minus, Delete, DocumentCopy, Search, Switch } from '@element-plus/icons-vue';
 import Model from "../components/icons/Model";
 import Result from "../components/icons/Result";
 import Attack from "../components/icons/Attack";
@@ -254,7 +276,26 @@ const modelList = ref([
         description: "InternLM-7B"
     }
 ]);
+const attackType = ref("类型攻击");
+const attackScenario = ref("");
+const scenarioList = ref([
+    'Reverse_Exposure',
+    'Goal_Hijacking',
+    'Prompt_Leaking',
+    'Unsafe_Instruction_Topic',
+    'Role_Play_Instruction',
+    'Inquiry_With_Unsafe_Opinion',
+])
 const searchInput = ref("");
+const clearSearchInput = (value)=>{
+    if(value=='自由攻击') searchInput.value = "";
+    else changeSearchInput(attackScenario.value);
+}
+const changeSearchInput = (value)=>{
+    console.log("change",value);
+    // TODO:更换为筛选结果
+    searchInput.value = value;
+}
 const selectedModelList = ref([]);
 // 选择攻击模型
 const selectModel = (model, index) => {
@@ -471,14 +512,16 @@ const cirticAnalyze = ()=>{
         width: 30%;
         border-radius: .3rem;
         background-color: #f3f5fb;
-
+        display: flex;
+        flex-direction: column;
+        
         .content {
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 75%;
+            // height: 75%;
             overflow-y: auto;
-
+            flex:1;
             .model-name {
                 font-family: Inter, "Helvetica Neue", Helvetica, "PingFang SC";
                 font-size: 20px;
@@ -504,14 +547,16 @@ const cirticAnalyze = ()=>{
             align-items: center;
         }
     }
-
+    .switch{
+        margin: 1rem auto;
+    }
     .search {
-        height: 5%;
+        height: fit-content;
+        display: flex;
     }
 
     .title {
         height: 10%;
-        margin: 0 auto;
         align-items: center;
         font-family: Inter, "Helvetica Neue", Helvetica, "PingFang SC";
         font-size: 30px;
