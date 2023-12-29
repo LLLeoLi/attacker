@@ -1,4 +1,4 @@
-import service from "@/http/request";
+import service from "../http/request";
 const urls = {
     eva:'/eva',
 }

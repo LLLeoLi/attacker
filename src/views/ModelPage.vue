@@ -6,7 +6,7 @@
                 <span>模型列表</span>
             </div>
             <div class="switch">
-                <el-radio-group v-model="attackType" size="large" fill="#626aef" @change="clearSearchInput">
+                <el-radio-group v-model="attackType" size="large" fill="#626aef" @change="changeAttackType">
                     <el-radio-button color="#626aef" label="类型攻击" />
                     <el-radio-button color="#626aef" label="自由攻击" />
                 </el-radio-group>
@@ -16,7 +16,8 @@
                     <el-input v-model="searchInput" :prefix-icon="Attack"  placeholder="请输入prompt"/>
                 </template>
                 <template v-else>
-                    <el-select v-model="attackScenario" placeholder="Select" @change="changeSearchInput">
+                    <!-- 类型攻击 -->
+                    <el-select v-model="attackScenario" placeholder="Select" multiple>
                         <el-option
                         v-for="item in scenarioList"
                         :key="item"
@@ -30,8 +31,6 @@
                             </span>
                         </el-option>
                     </el-select>
-                    <el-input v-model="searchInput" placeholder="请输入prompt" disabled>
-                    </el-input>
                 </template>
             </div>
             <div class="content">
@@ -48,10 +47,23 @@
                 </div>
             </div>
             <div class="run">
-                <el-button type="warning" :icon="Delete" :disabled="selectedModelList.length == 0"
-                    @click="deleteAll">清除模型</el-button>
-                <el-button color="#626aef" :icon="Attack" :disabled="selectedModelList.length == 0 || searchInput.length == 0"
-                    @click="attack">攻击模型 ({{ selectedModelList.length }}/20)</el-button>
+                <template v-if="attackType=='自由攻击'">
+                    <el-button type="warning" :icon="Delete" :disabled="selectedModelList.length == 0"
+                    @click="deleteAll">
+                        清除模型
+                    </el-button>
+                    <el-button color="#626aef" :icon="Attack" :disabled="selectedModelList.length == 0 || searchInput.length == 0"
+                    @click="attack">
+                        攻击模型 
+                        ({{ selectedModelList.length }}/20)
+                    </el-button>
+                </template>
+                <template v-else>
+                    <el-button color="#626aef" :icon="Attack" :disabled="selectedModelList.length == 0 || attackScenario.length == 0"
+                    @click="attack">
+                        攻击模型
+                    </el-button>
+                </template>
             </div>
         </div>
         <div class="model-res">
@@ -59,43 +71,78 @@
                 <Result class="icon"></Result>
                 <span>运行结果</span>
             </div>
-            <div class="content">
-                <template v-if="output.length">
-                    <div class="output" v-for="out in output" :key="out.name">
-                        <div class="output-model">
-                            <div class="output-name">{{ out.name }}
-                                <!-- <el-button class="output-copy" type="text" plain :icon="DocumentCopy" @click="toCopy(out.value)"></el-button> -->
+            <template v-if="attackType=='自由攻击'">
+                <div class="content" >
+                    <template v-if="output.length">
+                        <div class="output" v-for="(out,index) in output" :key="index">
+                            <div class="output-model">
+                                <div class="output-name">{{ out.name }}
+                                    <!-- <el-button class="output-copy" type="text" plain :icon="DocumentCopy" @click="toCopy(out.value)"></el-button> -->
+                                </div>
+                            </div>
+                            <div class="output-text">
+                                {{ out.model_response }}
                             </div>
                         </div>
-                        <div class="output-text">
-                            {{ out.value }}
+                    </template>
+                    <el-empty v-else description="自由攻击-暂无内容" />
+                </div>
+                <div class="next">
+                    <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="output.length==0">安全性检测</el-button>
+                </div>
+            </template>
+            <template v-else>
+                <div class="content" >
+                    <template v-if="typeOutput.length">
+                        <div class="output" v-for="(out,index) in typeOutput" :key="index">
+                            <div class="output-model">
+                                <div class="output-name">{{ out.type }}-{{ out.valid }}
+                                </div>
+                            </div>
+                            <div class="output-text">
+                                    模型prompt: <br/>
+                                    {{ out.prompt }}
+                                    <br/>
+                                    模型响应: <br/>
+                                    {{ out.model_response }}
+                            </div>
                         </div>
-                    </div>
-                </template>
-                <el-empty v-else description="暂无内容" />
-            </div>
-            <div class="next">
-                <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="output.length==0">安全性检测</el-button>
-            </div>
+                    </template>
+                    <el-empty v-else description="类型攻击-暂无内容" />
+                </div>
+                <div class="next">
+                    <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="typeOutput.length==0">安全性检测</el-button>
+                </div>
+            </template>
+            
+            
         </div>
         <div class="model-analyse">
             <div class="title">
                 <Analyse class="icon"></Analyse>
                 <span>安全性检测</span>
             </div>
-            <template v-if="showCritic">
-                <div class="rate" id="rate" ref="rate"></div>
-                <div class="content">
-                    <div class="analysis" v-for="out in criticOutput" :key="out.name">
-                        <div class="analysis-model">
-                            <div class="output-name">{{ out.name }}</div>
-                        </div>
-                        <div class="analysis-text">
-                            {{ out.analysis }}
+            <div v-if="showCritic" class="content">
+                <template v-if="attackType=='自由攻击'">
+                    <div class="rate" ref="rate"></div>
+                    <div class="content" >
+                        <div class="analysis" v-for="out in criticOutput" :key="out.name">
+                            <div class="analysis-model">
+                                <div class="output-name">{{ out.name }}</div>
+                            </div>
+                            <div class="analysis-text">
+                                {{ out.analysis }}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </template>
+                </template>
+                <template v-else>
+                    <div class="rate" ref="typeRate"></div>
+                    <template v-for="item in Object.keys(typeRes)">
+                        <div class="rate" :id="item+'-chart'"></div>
+                    </template>
+                </template>
+            </div>
             <el-empty v-else description="暂无内容" />
         </div>
     </div>
@@ -110,8 +157,9 @@ import Analyse from '../components/icons/Analyse';
 import { ElLoading, ElMessage } from 'element-plus';
 import { TransitionPresets, useTransition, useClipboard } from '@vueuse/core';
 import { getEva } from "../api/models"
+import { genAttackPrompt } from "../api/attack"
 import * as echarts from 'echarts';
-import { onMounted } from 'vue';
+import { nextTick, onMounted } from 'vue';
 const models = [
     {
         name: "Qwen-14B-Chat",
@@ -277,7 +325,8 @@ const modelList = ref([
     }
 ]);
 const attackType = ref("类型攻击");
-const attackScenario = ref("");
+const attackScenario = ref([]);
+let attackScenarioCopy = [];
 const scenarioList = ref([
     'Reverse_Exposure',
     'Goal_Hijacking',
@@ -285,17 +334,14 @@ const scenarioList = ref([
     'Unsafe_Instruction_Topic',
     'Role_Play_Instruction',
     'Inquiry_With_Unsafe_Opinion',
-])
+]);
+// 可视化展示rate
+const showCritic = ref(false);
+
+const changeAttackType = ()=>{
+    reset();
+}
 const searchInput = ref("");
-const clearSearchInput = (value)=>{
-    if(value=='自由攻击') searchInput.value = "";
-    else changeSearchInput(attackScenario.value);
-}
-const changeSearchInput = (value)=>{
-    console.log("change",value);
-    // TODO:更换为筛选结果
-    searchInput.value = value;
-}
 const selectedModelList = ref([]);
 // 选择攻击模型
 const selectModel = (model, index) => {
@@ -307,6 +353,7 @@ const selectModel = (model, index) => {
         selectedModelList.value.splice(selectedModelList.value.indexOf(model), 1);
     }
 }
+
 // 全部清除
 const deleteAll = () => {
     modelList.value.forEach(model => {
@@ -315,32 +362,60 @@ const deleteAll = () => {
     selectedModelList.value.length = 0;
 }
 
-// 获取内容
+// 直接将值初始化
+const reset = ()=>{
+    // attacker
+    attackScenario.value.length = 0;
+    attackScenarioCopy.length = 0;
+    searchInput.value = "";
+    deleteAll();
+    // response
+    output.value.length = 0;
+    typeOutput.value.length = 0;
+    // critic
+    showCritic.value = false;
+}
+
+// 获取token
 const getToken = () => {
     return "24.d67162c0bee374c3575f6cf1b1049653.2592000.1705859414.282335-45184890";
 }
+
 const output = ref([]);
+const typeOutput = ref([]);
+// 开始对指定模型的攻击
 const attack = () => {
-    if (!searchInput.value) {
+    if(attackType.value == "类型攻击" && selectedModelList.value.length > 1){
         ElMessage({
-            message: '请输入prompt',
-            type: 'warning',
-        });
-        return;
-    }
-    if (selectedModelList.value.length == 0) {
-        ElMessage({
-            message: '请选择模型',
+            message: '类型攻击只能选择一个模型',
             type: 'warning',
         });
         return;
     }
     output.value.length = 0;
-    selectedModelList.value.forEach(model => {
-        attackApi(model);
+    ElMessage({
+        message: '正在攻击,请耐心等待…',
+        type: 'success',
     })
-    console.log("output",output.value);
+    if(attackType.value == "自由攻击"){
+        selectedModelList.value.forEach(model => {
+            attackApi(model);
+        })
+    }else{
+        attackScenarioCopy = attackScenario.value;
+        const payload = {
+            type_list:attackScenarioCopy,
+            select_model:"gpt-3.5-turbo",
+        };
+        genAttackPrompt(payload).then((res)=>{
+            console.log("genAttackPrompt",res);
+            typeOutput.value = res.data.res;
+        }).catch((err)=>{
+            console.log(err);
+        })
+    }
 }
+// 用于prompt自由攻击
 const attackApi = async (model) => {
     const url = `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatglm2_6b_32k?access_token=${getToken()}`;
     const data = {
@@ -354,7 +429,7 @@ const attackApi = async (model) => {
     let obj = {};
     obj.name = model.name;
     obj.index = model.index;
-    obj.value = "";
+    obj.model_response = "";
     let res = {};
     try {
         res = await fetch(url, {
@@ -383,12 +458,12 @@ const attackApi = async (model) => {
         } catch {
             value.result = "";
         }
-        obj.value += value.result;
+        obj.model_response += value.result;
     }
     output.value.push(obj);
-    console.log(output.value);
     output.value.sort((a, b) => a.index - b.index);
 }
+
 // TODO: 之后决定是否添加复制功能
 const { text, isSupported, copy } = useClipboard();
 const toCopy = (str) => {
@@ -399,10 +474,16 @@ const toCopy = (str) => {
     })
 }
 
-// 可视化展示rate
-const showCritic = ref(false);
+
+// 自由攻击模式
 const rate = ref();
-const initRate = (safe,unsafe,contro) => {
+const rateSafe = ref({
+    safe:0,
+    unsafe:0,
+    contro:0,
+})
+// 生成图表
+const initRate = () => {
     let rateChart = echarts.init(rate.value);
     let option = {
         title: {
@@ -430,7 +511,7 @@ const initRate = (safe,unsafe,contro) => {
                     borderRadius: 5
                 },
                 data: [
-                    { value: safe+unsafe+contro, name: '安全' },
+                    { value: rateSafe.value.safe + rateSafe.value.unsafe + rateSafe.value.contro, name: '安全' },
                     { value: 0, name: '不安全' },
                     { value: 0, name: '有争议' },
                 ]
@@ -448,54 +529,165 @@ const initRate = (safe,unsafe,contro) => {
                     position: 'inside',
                 },
                 data: [
-                    { value: safe, name: '安全' },
-                    { value: unsafe, name: '不安全' },
-                    { value: contro, name: '有争议' },
+                    { value: rateSafe.value.safe, name: '安全' },
+                    { value: rateSafe.value.unsafe, name: '不安全' },
+                    { value: rateSafe.value.contro, name: '有争议' },
                 ]
             }
         ]
     };
     rateChart.setOption(option);
 }
-const criticOutput = ref([]);
-const cirticAnalyze = ()=>{
-    showCritic.value = true;
-    const crList = [];
-    output.value.forEach((item)=>{
-        let temp = {
-            // TODO: 替换prompt
-            context:searchInput.value||"你好",
-            response:item.value,
-            lang:"zh"
-        }
-        console.log("TEMP",temp);
-        crList.push(temp);
+// 类型攻击模式
+const typeRate = ref();
+const typeRes = ref({});
+// 生成图表
+
+const initTypeRate = ()=>{
+    let typeRateChart = echarts.init(typeRate.value);
+    let safe_count = 0;
+    let total_count = 0;
+    Object.values(typeRes.value).forEach((item)=>{
+        safe_count += item.safe;
+        total_count += item.total;
     })
-    ElMessage({
-        message: '正在分析,请耐心等待…',
-        type: 'success',
-    })
-    getEva(crList).then((res)=>{
-        console.log("getEva",res);
-        let safe = 0, unsafe = 0, contro = 0;
-        res.data.forEach((item,index)=>{
-            criticOutput.value.push({
-                analysis:item.analysis,
-                name:output.value[index].name,
-                label:item.label
-            })
-            if(item.label==0){
-                safe++;
-            }else if(item.label==1){
-                unsafe++;
-            }else{
-                contro++;
+    const typeOption = {
+        title: {
+            text: '攻击结果分析',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'item'
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left'
+        },
+        series: [
+            {
+                name: '攻击结果',
+                type: 'pie',
+                radius: '50%',
+                data: [
+                    { value: safe_count, name: '安全' },
+                    { value: total_count - safe_count, name: '不安全' },
+                ],
+                emphasis: {
+                    itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
             }
+        ]
+    };
+    typeRateChart.setOption(typeOption);
+    initSubTypeRate();
+}
+const initSubTypeRate = async()=>{
+    let subCharts = [];
+    let subOptions = [];
+    await nextTick();
+    for(let i=0;i<Object.keys(typeRes.value).length;i++){
+        let tempChart = echarts.init(document.getElementById(Object.keys(typeRes.value)[i]+'-chart'));
+        let temp = {
+            title: {
+                text: Object.keys(typeRes.value)[i],
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'item'
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left'
+            },
+            series: [
+                {
+                    name: '攻击结果',
+                    type: 'pie',
+                    radius: '50%',
+                    data: [
+                        { value: typeRes.value[Object.keys(typeRes.value)[i]].safe, name: '安全' },
+                        { value: typeRes.value[Object.keys(typeRes.value)[i]].total - typeRes.value[Object.keys(typeRes.value)[i]].safe, name: '不安全' },
+                    ],
+                    emphasis: {
+                        itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }
+            ]
+        };
+        tempChart.setOption(temp);
+        subCharts.push(tempChart);
+        subOptions.push(temp);
+    }
+}
+// 获取分析结果
+const criticOutput = ref([]);
+const cirticAnalyze = async ()=>{
+    showCritic.value = true;
+    await nextTick();
+    if(attackType.value == "自由攻击"){
+        const crList = [];
+        output.value.forEach((item)=>{
+            let temp = {
+                context:searchInput.value,
+                response:item.model_response,
+                lang:"zh"
+            }
+            crList.push(temp);
         })
-        initRate(safe, unsafe,contro);
-    }).catch((err)=>{
-        console.log(err);
-    })
+        ElMessage({
+            message: '正在分析,请耐心等待…',
+            type: 'success',
+        })
+        getEva(crList).then((res)=>{
+            console.log("getEva",res);
+            rateSafe.value.safe = 0;
+            rateSafe.value.unsafe = 0;
+            rateSafe.value.contro = 0;
+            res.data.forEach((item,index)=>{
+                criticOutput.value.push({
+                    analysis:item.analysis,
+                    name:output.value[index].name,
+                    label:item.label
+                })
+                if(item.label==0){
+                    rateSafe.value.safe++;
+                }else if(item.label==1){
+                    rateSafe.value.unsafe++;
+                }else{
+                    rateSafe.value.contro++;
+                }
+            })
+            initRate();
+        }).catch((err)=>{
+            console.log("getEva",err);
+        })
+    }
+    // 类型攻击
+    else{
+        typeRes.value = attackScenarioCopy.reduce((pre,cur)=>{
+            pre[cur] = {
+                safe:0,
+                total:0,
+            };
+            return pre;
+        },{});
+        typeOutput.value.forEach((item)=>{
+            if(item.valid == "safe"){
+                typeRes.value[item.type].safe++;
+            }
+            typeRes.value[item.type].total++;
+        })
+        console.log("typeRes",typeRes.value);
+        initTypeRate();
+    }
 }
 
 </script>
@@ -626,8 +818,6 @@ const cirticAnalyze = ()=>{
         margin-top: 1rem;
         margin-bottom: 1rem;
         background-color: #f3f5fb;
-        overflow-y: auto;
-        overflow-x: hidden;
         .rate {
             margin-top: 1rem;
             width: 100%;
@@ -639,7 +829,9 @@ const cirticAnalyze = ()=>{
             display: flex;
             flex-direction: column;
             align-items: center;
-
+            overflow-y: auto;
+            overflow-x: hidden;
+            height: 90%;
             .analysis {
                 margin: 1rem .3rem;
                 padding: .3rem;
@@ -662,4 +854,8 @@ const cirticAnalyze = ()=>{
     &-analyse:hover {
         border: 1px solid #dcdfe6;
     }
-}</style>
+}
+.el-select{
+    width: 100%;
+}
+</style>
