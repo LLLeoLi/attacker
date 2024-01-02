@@ -41,5 +41,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
     extensions: ['.js',',ts','.json','.jsx','.tsx','.vue'],
-  }
+  },
+  esbuild: {
+    pure: ['console.log'], // 删除 console.log
+    drop: ['debugger'], // 删除 debugger
+  },
 })
