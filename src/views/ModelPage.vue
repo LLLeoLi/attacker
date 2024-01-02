@@ -34,7 +34,7 @@
                 </template>
             </div>
             <div class="content">
-                <div class="row" v-for="(model, index) in modelList" :key="model.name">
+                <div class="row" v-for="(model, index) in (useAPI?modelList:models)" :key="model.name">
                     <div class="model-name">
                         {{ model.name }}
                         <template v-if="!model.selected">
@@ -156,92 +156,13 @@ import Attack from "../components/icons/Attack";
 import Analyse from '../components/icons/Analyse';
 import { ElLoading, ElMessage } from 'element-plus';
 import { TransitionPresets, useTransition, useClipboard } from '@vueuse/core';
-import { getEva } from "../api/models"
-import { genAttackPrompt } from "../api/attack"
+import { getEva } from "../api/eva";
+import { genAttackPrompt } from "../api/attack";
 import * as echarts from 'echarts';
 import { nextTick, onMounted } from 'vue';
-const models = [
-    {
-        name: "Qwen-14B-Chat",
-        description: "Qwen-14B-Chat"
-    },
-    {
-        name: "Qwen-14B-Base",
-        description: "Qwen-14B-Base"
-    },
-    {
-        name: "InternLM-20B",
-        description: "InternLM-20B"
-    },
-    {
-        name: "InternLM-Chat-7B",
-        description: "InternLM-Chat-7B"
-    },
-    {
-        name: "Baichuan2-13B-Chat",
-        description: "Baichuan2-13B-Chat"
-    },
-    {
-        name: "Yulan-Chat-2-13B",
-        description: "Yulan-Chat-2-13B"
-    },
-    {
-        name: "Baichuan-13B-Chat",
-        description: "Baichuan-13B-Chat"
-    },
-    {
-        name: "ChatGLM3-6B",
-        description: "ChatGLM3-6B"
-    },
-    {
-        name: "Qwen-7B-Base",
-        description: "Qwen-7B-Base"
-    },
-    {
-        name: "BELLE-LLaMA-2-Chat",
-        description: "BELLE-LLaMA-2-Chat"
-    },
-    {
-        name: "Baichuan2-7B-Chat",
-        description: "Baichuan2-7B-Chat"
-    },
-    {
-        name: "ChatGLM2-6B",
-        description: "ChatGLM2-6B"
-    },
-    {
-        name: "Qwen-14B-Chat",
-        description: "Qwen-14B-Chat"
-    },
-    {
-        name: "LLaMa-2-13B-Chinese-Chat",
-        description: "LLaMa-2-13B-Chinese-Chat"
-    },
-    {
-        name: "Chinese-Alpaca-2-7B-Chat",
-        description: "Chinese-Alpaca-2-7B-Chat"
-    },
-    {
-        name: "Chinese-LLaMA-2-7B-Chat",
-        description: "Chinese-LLaMA-2-7B-Chat"
-    },
-    {
-        name: "Baichuan-13B-Base",
-        description: "Baichuan-13B-Base"
-    },
-    {
-        name: "Baichuan2-13B-Base",
-        description: "Baichuan2-13B-Base"
-    },
-    {
-        name: "XVERSE-13B",
-        description: "XVERSE-13B"
-    },
-    {
-        name: "InternLM-7B",
-        description: "InternLM-7B"
-    }
-];
+import {llama2_chinese_7b_chat, chatglm2_6b} from "../api/model";
+// 切换模型和API时，切换template中的modelList，然后切换attack
+const useAPI = ref(true);
 const modelList = ref([
     {
         name: "Qwen-14B-Chat",
@@ -324,6 +245,16 @@ const modelList = ref([
         description: "InternLM-7B"
     }
 ]);
+const models = ref([
+    {
+        name: "ChatGLM2-6B",
+        description: "ChatGLM2-6B"
+    },
+    {
+        name:"llama2_chinese_7b_chat",
+        description: "llama2_chinese_7b_chat"
+    }
+])
 const attackType = ref("类型攻击");
 const attackScenario = ref([]);
 let attackScenarioCopy = [];
@@ -357,6 +288,9 @@ const selectModel = (model, index) => {
 // 全部清除
 const deleteAll = () => {
     modelList.value.forEach(model => {
+        model.selected = false;
+    })
+    models.value.forEach(model=>{
         model.selected = false;
     })
     selectedModelList.value.length = 0;
@@ -398,9 +332,18 @@ const attack = () => {
         type: 'success',
     })
     if(attackType.value == "自由攻击"){
-        selectedModelList.value.forEach(model => {
-            attackApi(model);
-        })
+        // 使用API版本
+        if(useAPI.value){
+            selectedModelList.value.forEach(model => {
+                attackApi(model);
+            })
+        }
+        // 使用模型版本
+        else{
+            selectedModelList.value.forEach(model=>{
+                attackModel(model);
+            })
+        }
     }else{
         attackScenarioCopy = attackScenario.value;
         const payload = {
@@ -415,7 +358,7 @@ const attack = () => {
         })
     }
 }
-// 用于prompt自由攻击
+// 用于API版本的prompt自由攻击
 const attackApi = async (model) => {
     const url = `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatglm2_6b_32k?access_token=${getToken()}`;
     const data = {
@@ -463,7 +406,28 @@ const attackApi = async (model) => {
     output.value.push(obj);
     output.value.sort((a, b) => a.index - b.index);
 }
-
+// 用于模型版本的prompt自由攻击
+const attackModel = async (model)=>{
+    let obj = {};
+    obj.name = model.name;
+    obj.index = model.index;
+    obj.model_response = "";
+    try{
+        if(model.name=="llama2_chinese_7b_chat"){
+            let res = await llama2_chinese_7b_chat([{context:searchInput.value}]);
+            console.log("llama2_chinese_7b_chat",res);
+            obj.model_response = res.data[0].response;
+        }else if(model.name=="ChatGLM2-6B"){
+            let res = await chatglm2_6b([{context:searchInput.value}]);
+            console.log("chatglm2_6b",res.data[0].response);
+            obj.model_response = res.data[0].response;
+        }
+    }catch(err){
+        console.log(err);
+    }
+    output.value.push(obj);
+    output.value.sort((a, b) => a.index < b.index);
+}
 // TODO: 之后决定是否添加复制功能
 const { text, isSupported, copy } = useClipboard();
 const toCopy = (str) => {
@@ -858,4 +822,4 @@ const cirticAnalyze = async ()=>{
 .el-select{
     width: 100%;
 }
-</style>
+</style>../api/eva
