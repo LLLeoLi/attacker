@@ -17,7 +17,7 @@
                 </template>
                 <template v-else>
                     <!-- 类型攻击 -->
-                    <el-select v-model="attackScenario" placeholder="Select" multiple>
+                    <el-select v-model="attackScenario" placeholder="Select" multiple @change="changeScenario">
                         <el-option
                         v-for="item in scenarioList"
                         :key="item"
@@ -100,10 +100,14 @@
                                 </div>
                             </div>
                             <div class="output-text">
-                                    模型prompt: <br/>
+                                    <span class="output-subtitle">
+                                        模型提示: <br/>
+                                    </span>
                                     {{ out.prompt }}
                                     <br/>
-                                    模型响应: <br/>
+                                    <span class="output-subtitle">
+                                        模型响应: <br/>
+                                    </span>
                                     {{ out.model_response }}
                             </div>
                         </div>
@@ -138,9 +142,10 @@
                 </template>
                 <template v-else>
                     <div class="rate" ref="typeRate"></div>
-                    <template v-for="item in Object.keys(typeRes)">
-                        <div class="rate" :id="item+'-chart'"></div>
-                    </template>
+                        <div v-for="(item,index) in Object.keys(typeRes)" 
+                            class="rate" 
+                            :id="item+'-chart'+randomKeys[index]">
+                        </div>
                 </template>
             </div>
             <el-empty v-else description="暂无内容" />
@@ -155,7 +160,7 @@ import Result from "../components/icons/Result";
 import Attack from "../components/icons/Attack";
 import Analyse from '../components/icons/Analyse';
 import { ElLoading, ElMessage } from 'element-plus';
-import { TransitionPresets, useTransition, useClipboard } from '@vueuse/core';
+import { TransitionPresets, useTransition, useClipboard, useThrottleFn } from '@vueuse/core';
 import { getEva } from "../api/eva";
 import { genAttackPrompt } from "../api/attack";
 import * as echarts from 'echarts';
@@ -274,6 +279,22 @@ const changeAttackType = ()=>{
 }
 const searchInput = ref("");
 const selectedModelList = ref([]);
+// 当攻击场景变化后，清空运行结果
+const changeScenario = (value)=>{
+    // 清空运行结果
+    typeOutput.value.length = 0;
+    // 清空图表
+    showCritic.value = false;
+    if(typeRateChart!=null){
+        typeRateChart.dispose();
+    }
+    typeRes.value.length = 0;
+    subCharts.forEach((item)=>{
+        item.dispose();
+    })
+    subCharts.length = 0;
+    console.log("value",value);
+}
 // 选择攻击模型
 const selectModel = (model, index) => {
     model.selected = !model.selected;
@@ -318,7 +339,7 @@ const getToken = () => {
 const output = ref([]);
 const typeOutput = ref([]);
 // 开始对指定模型的攻击
-const attack = () => {
+const attack = useThrottleFn(() => {
     if(attackType.value == "类型攻击" && selectedModelList.value.length > 1){
         ElMessage({
             message: '类型攻击只能选择一个模型',
@@ -357,7 +378,7 @@ const attack = () => {
             console.log(err);
         })
     }
-}
+},3000)
 // 用于API版本的prompt自由攻击
 const attackApi = async (model) => {
     const url = `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatglm2_6b_32k?access_token=${getToken()}`;
@@ -506,14 +527,17 @@ const initRate = () => {
 const typeRate = ref();
 const typeRes = ref({});
 // 生成图表
-
+let randomKeys = ref([]);
+let typeRateChart = null;
 const initTypeRate = ()=>{
-    let typeRateChart = echarts.init(typeRate.value);
+    typeRateChart = echarts.init(typeRate.value);
     let safe_count = 0;
     let total_count = 0;
+    randomKeys.value.length = 0;
     Object.values(typeRes.value).forEach((item)=>{
         safe_count += item.safe;
         total_count += item.total;
+        randomKeys.value.push(Math.random());
     })
     const typeOption = {
         title: {
@@ -549,12 +573,12 @@ const initTypeRate = ()=>{
     typeRateChart.setOption(typeOption);
     initSubTypeRate();
 }
+let subCharts = [];
 const initSubTypeRate = async()=>{
-    let subCharts = [];
-    let subOptions = [];
+    subCharts.length = 0;
     await nextTick();
     for(let i=0;i<Object.keys(typeRes.value).length;i++){
-        let tempChart = echarts.init(document.getElementById(Object.keys(typeRes.value)[i]+'-chart'));
+        let tempChart = echarts.init(document.getElementById(Object.keys(typeRes.value)[i]+'-chart'+randomKeys.value[i]));
         let temp = {
             title: {
                 text: Object.keys(typeRes.value)[i],
@@ -588,12 +612,11 @@ const initSubTypeRate = async()=>{
         };
         tempChart.setOption(temp);
         subCharts.push(tempChart);
-        subOptions.push(temp);
     }
 }
 // 获取分析结果
 const criticOutput = ref([]);
-const cirticAnalyze = async ()=>{
+const cirticAnalyze = useThrottleFn(async ()=>{
     showCritic.value = true;
     await nextTick();
     if(attackType.value == "自由攻击"){
@@ -652,7 +675,7 @@ const cirticAnalyze = async ()=>{
         console.log("typeRes",typeRes.value);
         initTypeRate();
     }
-}
+},3000)
 
 </script>
 
@@ -744,9 +767,9 @@ const cirticAnalyze = async ()=>{
             align-items: center;
             height: 80%;
             overflow-y: auto;
-
+            overflow-x: hidden;
             .output {
-                margin: 1rem .3rem;
+                margin-top: .5rem;
                 padding: .3rem;
 
                 &-model {
@@ -755,6 +778,10 @@ const cirticAnalyze = async ()=>{
                     display: flex;
                     font-size: 1.3rem;
                     justify-content: center;
+                }
+                &-subtitle{
+                    font-weight: bold;
+                    color: black;
                 }
 
                 &-text {
@@ -790,12 +817,9 @@ const cirticAnalyze = async ()=>{
         }
 
         .content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             overflow-y: auto;
             overflow-x: hidden;
-            height: 90%;
+            max-height: 90%;
             .analysis {
                 margin: 1rem .3rem;
                 padding: .3rem;
