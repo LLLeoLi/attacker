@@ -2,7 +2,7 @@
   <div>
     <Header></Header>
     <div class="main">
-      <RouterView></RouterView>
+      <HomePage/>
     </div>
     <Footer></Footer>
   </div>
@@ -10,6 +10,7 @@
 <script setup>
 import Header from "../components/layout/Header"
 import Footer from "../components/layout/Footer"
+import HomePage from "./HomePage.vue"
 </script>
 <style lang="scss" scoped>
 .main{
