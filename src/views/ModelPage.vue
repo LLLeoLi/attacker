@@ -155,15 +155,15 @@
                                     <div class="analysis-chart-text">安全</div>
                                 </div>
                                 <div class="analysis-subtitle">修改后</div>
-                                <div v-if="out.label == '0'" class="analysis-chart-block">
+                                <div v-if="out.label == 0" class="analysis-chart-block">
                                     <Safe></Safe>
                                     <div class="analysis-chart-text">安全</div>
                                 </div>
-                                <div v-if="out.label == '1'" class="analysis-chart-block">
+                                <div v-if="out.label == 1" class="analysis-chart-block">
                                     <Unsafe></Unsafe>
                                     <div class="analysis-chart-text">不安全</div>
                                 </div>
-                                <div v-if="out.label == '2'" class="analysis-chart-block">
+                                <div v-if="out.label == 2" class="analysis-chart-block">
                                     <Controversial></Controversial>
                                     <div class="analysis-chart-text">有争议</div>
                                 </div>
