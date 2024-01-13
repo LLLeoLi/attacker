@@ -372,6 +372,7 @@ const attack = useThrottleFn(() => {
             select_model:"gpt-3.5-turbo",
         };
         genAttackPrompt(payload).then((res)=>{
+            // TODO: 这里可以切换成静态数据，方便演示
             console.log("genAttackPrompt",res);
             typeOutput.value = res.data.res;
         }).catch((err)=>{
