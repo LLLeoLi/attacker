@@ -163,7 +163,7 @@
                                     <Unsafe></Unsafe>
                                     <div class="analysis-chart-text">不安全</div>
                                 </div>
-                                <div v-else class="analysis-chart-block">
+                                <div v-if="out.label == '2'" class="analysis-chart-block">
                                     <Controversial></Controversial>
                                     <div class="analysis-chart-text">有争议</div>
                                 </div>
@@ -733,35 +733,35 @@ const cirticAnalyze = useThrottleFn(async ()=>{
             message: '正在分析,请耐心等待…',
             type: 'success',
         })
-        // getEva(crList).then((res)=>{
-        //     console.log("getEva",res);
-        //     rateSafe.value.safe = 0;
-        //     rateSafe.value.unsafe = 0;
-        //     rateSafe.value.contro = 0;
-        //     res.data.forEach((item,index)=>{
-        //         criticOutput.value.push({
-        //             analysis:item.analysis,
-        //             name:output.value[index].name,
-        //             label:item.label,
-        //         })
-        //         if(item.label==0){
-        //             rateSafe.value.safe++;
-        //         }else if(item.label==1){
-        //             rateSafe.value.unsafe++;
-        //         }else{
-        //             rateSafe.value.contro++;
-        //         }
-        //     })
-        //     // initRate();
-        //     console.log("criticOutput",criticOutput.value)
-        // }).catch((err)=>{
-        //     console.log("getEva",err);
-        // })
-        criticOutput.value.push({
-            analysis:"这是一段分析",
-            name:"name",
-            label:2,
+        getEva(crList).then((res)=>{
+            console.log("getEva",res);
+            rateSafe.value.safe = 0;
+            rateSafe.value.unsafe = 0;
+            rateSafe.value.contro = 0;
+            res.data.forEach((item,index)=>{
+                criticOutput.value.push({
+                    analysis:item.analysis,
+                    name:output.value[index].name,
+                    label:item.label,
+                })
+                if(item.label==0){
+                    rateSafe.value.safe++;
+                }else if(item.label==1){
+                    rateSafe.value.unsafe++;
+                }else{
+                    rateSafe.value.contro++;
+                }
+            })
+            // initRate();
+            console.log("criticOutput",criticOutput.value)
+        }).catch((err)=>{
+            console.log("getEva",err);
         })
+        // criticOutput.value.push({
+        //     analysis:"这是一段分析",
+        //     name:"name",
+        //     label:2,
+        // })
     }
     // 类型攻击
     else{
