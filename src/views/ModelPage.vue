@@ -144,6 +144,31 @@
                 <template v-if="attackType=='自由攻击'">
                     <!-- <div class="rate" ref="rate"></div> -->
                     <div class="content" >
+                        <div class="analysis" v-for="(out,index) in criticOutput" :key="index">
+                            <div class="analysis-model">
+                                <div class="output-name">{{ out.name }}</div>
+                            </div> 
+                            <div class="analysis-chart">
+                                <div class="analysis-subtitle">修改前</div>
+                                <div class="analysis-chart-block">
+                                    <Safe></Safe>
+                                    <div class="analysis-chart-text">安全</div>
+                                </div>
+                                <div class="analysis-subtitle">修改后</div>
+                                <div v-if="out.label == '0'" class="analysis-chart-block">
+                                    <Safe></Safe>
+                                    <div class="analysis-chart-text">安全</div>
+                                </div>
+                                <div v-if="out.label == '1'" class="analysis-chart-block">
+                                    <Unsafe></Unsafe>
+                                    <div class="analysis-chart-text">不安全</div>
+                                </div>
+                                <div v-else class="analysis-chart-block">
+                                    <Controversial></Controversial>
+                                    <div class="analysis-chart-text">有争议</div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="analysis" v-for="(out,index) in criticOutput" :key="out.name">
                             <div class="analysis-model">
                                 <div class="output-name">{{ out.name }}</div>
@@ -200,6 +225,9 @@ import Model from "../components/icons/Model";
 import Result from "../components/icons/Result";
 import Attack from "../components/icons/Attack";
 import Analyse from '../components/icons/Analyse';
+import Safe from '../components/icons/Safe'
+import Unsafe from '@/components/icons/Unsafe';
+import Controversial from '@/components/icons/Controversial';
 import { ElLoading, ElMessage } from 'element-plus';
 import { TransitionPresets, useTransition, useClipboard, useThrottleFn } from '@vueuse/core';
 import { getEva } from "../api/eva";
@@ -207,6 +235,8 @@ import { genAttackPrompt } from "../api/attack";
 import * as echarts from 'echarts';
 import { nextTick, onMounted, ref } from 'vue';
 import {llama2_chinese_7b_chat, chatglm2_6b} from "../api/model";
+
+
 // 切换模型和API时，切换template中的modelList，然后切换attack
 const useAPI = ref(true);
 const modelList = ref([
@@ -693,29 +723,34 @@ const cirticAnalyze = useThrottleFn(async ()=>{
             message: '正在分析,请耐心等待…',
             type: 'success',
         })
-        getEva(crList).then((res)=>{
-            console.log("getEva",res);
-            rateSafe.value.safe = 0;
-            rateSafe.value.unsafe = 0;
-            rateSafe.value.contro = 0;
-            res.data.forEach((item,index)=>{
-                criticOutput.value.push({
-                    analysis:item.analysis,
-                    name:output.value[index].name,
-                    label:item.label,
-                })
-                if(item.label==0){
-                    rateSafe.value.safe++;
-                }else if(item.label==1){
-                    rateSafe.value.unsafe++;
-                }else{
-                    rateSafe.value.contro++;
-                }
-            })
-            // initRate();
-            console.log("criticOutput",criticOutput.value)
-        }).catch((err)=>{
-            console.log("getEva",err);
+        // getEva(crList).then((res)=>{
+        //     console.log("getEva",res);
+        //     rateSafe.value.safe = 0;
+        //     rateSafe.value.unsafe = 0;
+        //     rateSafe.value.contro = 0;
+        //     res.data.forEach((item,index)=>{
+        //         criticOutput.value.push({
+        //             analysis:item.analysis,
+        //             name:output.value[index].name,
+        //             label:item.label,
+        //         })
+        //         if(item.label==0){
+        //             rateSafe.value.safe++;
+        //         }else if(item.label==1){
+        //             rateSafe.value.unsafe++;
+        //         }else{
+        //             rateSafe.value.contro++;
+        //         }
+        //     })
+        //     // initRate();
+        //     console.log("criticOutput",criticOutput.value)
+        // }).catch((err)=>{
+        //     console.log("getEva",err);
+        // })
+        criticOutput.value.push({
+            analysis:"这是一段分析",
+            name:"name",
+            label:2,
         })
     }
     // 类型攻击
@@ -925,7 +960,6 @@ const showDialogTable = (index)=>{
             .analysis {
                 margin: 1rem .3rem;
                 padding: .3rem;
-
                 &-model {
                     border-bottom: 1px solid #dcdfe6;
                     font-weight: bold;
@@ -942,7 +976,25 @@ const showDialogTable = (index)=>{
                 }
                 &-button {
                     display: flex;
-                    justify-content: flex-endb ;
+                    justify-content: flex-end;
+                }
+                &-chart {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 20px 40px 0 40px;
+                }
+                &-chart-block {
+                    display: flex;
+                    flex-direction: column;
+                }
+                &-chart-text {
+                    text-align: center;
+                }
+                &-subtitle {
+                    width: 30px;
+                    font-weight: bold;
+                    color: #505050;
+                    text-align: center;
                 }
             }
         }
