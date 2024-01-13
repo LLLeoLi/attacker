@@ -20,11 +20,10 @@
                     </el-input>
                     <div class = "search-prompt">
                         <div class = "search-prompt-header">
-                            <div>修改后prompt:</div>
                         </div>
                         <div class="search-prompt-input">
                             <Attack style="margin: 0 10px;"></Attack>
-                        <el-input :rows="3" type="textarea" readonly v-model="changed_prompt"></el-input>
+                        <el-input :rows="3" type="textarea" readonly v-model="changed_prompt" placeholder="修改后prompt"></el-input>
                         </div>
                     </div>
                 </template>
@@ -65,7 +64,7 @@
                     @click="deleteAll">
                         清除模型
                     </el-button>
-                    <el-button color="#626aef" :icon="Attack" :disabled="selectedModelList.length == 0 || searchInput.length == 0"
+                    <el-button color="#626aef" :icon="Attack" :disabled="selectedModelList.length == 0 || changed_prompt.length == 0"
                     @click="attack">
                         攻击模型 
                         ({{ selectedModelList.length }}/20)
@@ -102,7 +101,7 @@
                     <el-empty v-else description="自由攻击-暂无内容" />
                 </div>
                 <div class="next">
-                    <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="output.length==0">安全性检测</el-button>
+                    <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="output.length==0||analysisDisabled">安全性检测</el-button>
                 </div>
             </template>
             <template v-else>
@@ -129,7 +128,7 @@
                     <el-empty v-else description="类型攻击-暂无内容" />
                 </div>
                 <div class="next">
-                    <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="typeOutput.length==0">安全性检测</el-button>
+                    <el-button type="primary" :icon="Analyse" @click="cirticAnalyze" :disabled="typeOutput.length==0||analysisDisabled">安全性检测</el-button>
                 </div>
             </template>
             
@@ -596,6 +595,7 @@ const initRate = () => {
 // 类型攻击模式
 const typeRate = ref();
 const typeRes = ref({});
+
 // 生成图表
 let randomKeys = ref([]);
 let typeRateChart = null;
@@ -686,9 +686,11 @@ const initSubTypeRate = async()=>{
 }
 // 获取分析结果
 const criticOutput = ref([]);
+const analysisDisabled = ref(false);
 const cirticAnalyze = useThrottleFn(async ()=>{
     showCritic.value = true;
     await nextTick();
+    analysisDisabled.value = true;
     if(attackType.value == "自由攻击"){
         const crList = [];
         output.value.forEach((item)=>{
@@ -703,7 +705,9 @@ const cirticAnalyze = useThrottleFn(async ()=>{
             message: '正在分析,请耐心等待…',
             type: 'success',
         })
+        
         getEva(crList).then((res)=>{
+            analysisDisabled.value = false;
             console.log("getEva",res);
             rateSafe.value.safe = 0;
             rateSafe.value.unsafe = 0;
@@ -737,6 +741,7 @@ const cirticAnalyze = useThrottleFn(async ()=>{
             };
             return pre;
         },{});
+        analysisDisabled.value = false;
         typeOutput.value.forEach((item)=>{
             if(item.valid == "safe"){
                 typeRes.value[item.type].safe++;
