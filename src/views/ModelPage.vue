@@ -100,7 +100,7 @@
                 </div>
             </template>
             <template v-else>
-                <div id="content" class="content">
+                <div id="content" class="content" style="height: 85%;">
                     <template v-if="typeOutput.length">
                         <div class="output" v-for="(out, index) in typeOutput" :key="index"
                             :class="index <= showIndex ? '' : 'd-none'">
@@ -927,7 +927,7 @@ const showDialogTable = (index) => {
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 85%;
+            height: 80%;
             overflow-y: auto;
             overflow-x: hidden;
 
@@ -957,12 +957,12 @@ const showDialogTable = (index) => {
             }
         }
 
-        // .next {
-        //     height: 10%;
-        //     display: flex;
-        //     justify-content: center;
-        //     align-items: center;
-        // }
+        .next {
+            height: 10%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
     }
 
     &-res:hover {
